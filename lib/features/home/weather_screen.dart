@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:weatheria/core/core_barrel.dart';
+import 'package:weatheria/core/utils/connectivity/connectivity_listener.dart';
 import 'package:weatheria/core/utils/provider/weather_provider.dart';
 import 'package:weatheria/core/utils/weather_icons.dart';
 import 'package:weatheria/features/home/provider/saved_locations_provider.dart';
@@ -35,6 +36,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final hourly = ref.watch(hourlyWeatherProvider);
     final weekly = ref.watch(weeklyWeatherProvider);
     final activeLocation = ref.watch(activeLocationProvider);
+    final isoffline = ref.watch(isOfflineProvider);
 
     void _showCitySearchDialog() {
       showCupertinoModalPopup(
@@ -64,7 +66,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
+                    isoffline
+                        ? const SizedBox(height: 16)
+                        : SizedBox(height: MediaQuery.of(context).padding.top),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
