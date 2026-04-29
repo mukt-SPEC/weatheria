@@ -1,3 +1,4 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _showInitialLocationAnimation = true;
+
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
@@ -38,7 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final activeLocation = ref.watch(activeLocationProvider);
     final isoffline = ref.watch(isOfflineProvider);
 
-    void _showCitySearchDialog() {
+    void showCitySearchDialog() {
       showCupertinoModalPopup(
         context: context,
         barrierDismissible: true,
@@ -46,7 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       );
     }
 
-    void _showLocationPickerDialog() {
+    void showLocationPickerDialog() {
       showCupertinoModalPopup(
         context: context,
         barrierDismissible: true,
@@ -77,13 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               activeLocation.when(
-                                data: (location) => Text(
-                                  location.label,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.titleLarge.copyWith(
-                                    color: colors.textColor,
-                                  ),
+                                data: (location) => _buildLocationLabel(
+                                  label: location.label,
+                                  colors: colors,
                                 ),
                                 loading: () =>
                                     HomeLocationShimmer(colors: colors),
@@ -143,15 +142,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    Text(
-                                      '${weatherData.current.tempC.round()}°',
-                                      style: AppTextStyles.displayLarge
-                                          .copyWith(
-                                            fontSize: 72,
-                                            fontWeight: FontWeight.w700,
-                                            height: 0.9,
-                                            color: colors.textColor,
-                                          ),
+                                    _buildTemperatureText(
+                                      weatherData: weatherData,
+                                      colors: colors,
+                                      isDark: isDark,
                                     ),
                                   ],
                                 ),
@@ -180,7 +174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               loading: () => HomeHourlyShimmer(colors: colors),
                             ),
-                            const SizedBox(height: 18),
+
                             weekly.when(
                               data: (weeklyData) => Column(
                                 children: [
@@ -191,7 +185,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                     colors: colors,
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 4),
                                   _DailyForecastRow(
                                     forecastDays: weeklyData.forecastDays,
                                     colors: colors,
@@ -208,21 +202,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         );
                       },
                       error: (error, stacktrace) {
+                        final msg = error.toString().toLowerCase();
+                        final bool isLocationError =
+                            msg.contains('location') ||
+                            msg.contains('permission') ||
+                            msg.contains('geolocator') ||
+                            msg.contains('geocod') ||
+                            msg.contains('disabled');
+
+                        final icon = isLocationError
+                            ? PhosphorIconsRegular.mapPin
+                            : PhosphorIconsRegular.wifiSlash;
+
+                        final headline = isLocationError
+                            ? 'Location unavailable'
+                            : 'No internet connection';
+
+                        final subtitle = isLocationError
+                            ? 'Please enable location services\nor grant location permission.'
+                            : 'Check your connection and try again.';
+
                         return Column(
                           children: [
                             Padding(
-                              padding: EdgeInsets.symmetric(vertical: 128),
+                              padding: const EdgeInsets.symmetric(vertical: 96),
                               child: Center(
                                 child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     PhosphorIcon(
-                                      PhosphorIconsRegular.wifiSlash,
+                                      icon,
+                                      size: 48,
+                                      color: colors.textColor.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
-                                    SizedBox(height: 12),
+                                    const SizedBox(height: 14),
                                     Text(
-                                      'No internet connection',
-                                      style: AppTextStyles.bodyMedium.copyWith(
+                                      headline,
+                                      style: AppTextStyles.titleMedium.copyWith(
                                         color: colors.textColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      subtitle,
+                                      textAlign: TextAlign.center,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: colors.secondaryTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    CupertinoButton(
+                                      color: colors.textColor,
+                                      sizeStyle: CupertinoButtonSize.medium,
+                                      onPressed: () {
+                                        ref.invalidate(activeLocationProvider);
+                                      },
+                                      child: Text(
+                                        'Retry',
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              color: colors.backgroundColor,
+                                            ),
                                       ),
                                     ),
                                   ],
@@ -245,7 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             Positioned(
-              bottom: 4,
+              bottom: 0,
               right: 0,
               left: 0,
               child: SafeArea(
@@ -253,7 +296,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
-                    padding: EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: colors.textColor,
                       borderRadius: BorderRadius.circular(32),
@@ -262,9 +305,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GestureDetector(
-                          onTap: _showCitySearchDialog,
+                          onTap: showCitySearchDialog,
                           child: Container(
-                            padding: EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(16),
                             child: Icon(
                               PhosphorIconsRegular.magnifyingGlass,
                               color: colors.backgroundColor,
@@ -272,9 +315,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: _showLocationPickerDialog,
+                          onTap: showLocationPickerDialog,
                           child: Container(
-                            padding: EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(16),
                             child: Icon(
                               PhosphorIconsFill.mapTrifold,
                               color: colors.backgroundColor,
@@ -290,6 +333,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationLabel({
+    required String label,
+    required AppColors colors,
+  }) {
+    final textStyle = AppTextStyles.titleLarge.copyWith(
+      color: colors.textColor,
+    );
+
+    if (!_showInitialLocationAnimation) {
+      return Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: textStyle,
+      );
+    }
+
+    return SizedBox(
+      height: 32,
+      child: AnimatedTextKit(
+        isRepeatingAnimation: false,
+        totalRepeatCount: 1,
+        onFinished: () {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _showInitialLocationAnimation = false;
+          });
+        },
+        animatedTexts: [
+          TyperAnimatedText(
+            label,
+            textStyle: textStyle,
+            speed: const Duration(milliseconds: 150),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget  _buildTemperatureText({
+    required Weather weatherData,
+    required AppColors colors,
+    required bool isDark,
+  }) {
+    final temperatureText = '${weatherData.current.tempC.round()}\u00B0';
+    final textStyle = AppTextStyles.displayLarge.copyWith(
+      fontSize: 72,
+      fontWeight: FontWeight.w700,
+      height: 0.9,
+      color: colors.textColor,
+    );
+
+    return AnimatedTextKit(
+      key: ValueKey(
+        '${isDark}_${weatherData.location.lat}_${weatherData.location.lon}_${weatherData.current.tempC.round()}',
+      ),
+      isRepeatingAnimation: false,
+      totalRepeatCount: 1,
+      displayFullTextOnTap: true,
+      animatedTexts: [
+        TyperAnimatedText(
+          temperatureText,
+          textStyle: textStyle,
+          speed: const Duration(milliseconds: 250),
+        ),
+      ],
     );
   }
 }
@@ -318,7 +432,8 @@ class _HourlyForecastRow extends StatelessWidget {
           return SizedBox(
             width: 48,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   index == 0 ? 'Now' : _formatHour(entry.time),
@@ -339,7 +454,7 @@ class _HourlyForecastRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${entry.tempC.round()}°',
+                  '${entry.tempC.round()}\u00B0',
                   style: AppTextStyles.titleMedium.copyWith(
                     color: colors.textColor,
                   ),
@@ -366,12 +481,12 @@ class _DailyForecastRow extends StatelessWidget {
     }
 
     final days = forecastDays.take(5).toList();
-    return SizedBox(
-      height: 62,
+    return SizedBox.fromSize(
+      size: Size(double.infinity, 62),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        separatorBuilder: (_, _) => const SizedBox(width: 24),
         itemBuilder: (context, index) {
           final day = days[index];
           final date = DateTime.tryParse(day.date);
@@ -387,7 +502,7 @@ class _DailyForecastRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                '${day.day.mintempC.round()}°/${day.day.maxtempC.round()}°',
+                '${day.day.mintempC.round()}\u00B0/${day.day.maxtempC.round()}\u00B0',
                 style: AppTextStyles.titleMedium.copyWith(
                   color: colors.textColor,
                 ),
@@ -513,7 +628,7 @@ List<_MetricData> _buildMetrics({
     _MetricData(label: 'Sunset', value: today?.astro.sunset ?? '--'),
     _MetricData(
       label: 'Feels like',
-      value: '${weatherData.current.feelslikeC.round()}°',
+      value: '${weatherData.current.feelslikeC.round()}\u00B0',
     ),
     _MetricData(
       label: 'Wind',
