@@ -132,9 +132,11 @@ class _CitySearchState extends ConsumerState<CitySearch> {
                                             );
                                         await ref
                                             .read(
-                                              selectedLocationProvider.notifier,
+                                              locationSelectionControllerProvider,
                                             )
-                                            .select(savedLocationId);
+                                            .selectStartupLocation(
+                                              savedLocationId,
+                                            );
 
                                         if (context.mounted) {
                                           Navigator.pop(context);

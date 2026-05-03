@@ -39,7 +39,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final hourly = ref.watch(hourlyWeatherProvider);
     final weekly = ref.watch(weeklyWeatherProvider);
     final activeLocation = ref.watch(activeLocationProvider);
-    final isoffline = ref.watch(isOfflineProvider);
+    final isOffline = ref.watch(isOfflineProvider);
 
     void showCitySearchDialog() {
       showCupertinoModalPopup(
@@ -69,7 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    isoffline
+                    isOffline
                         ? const SizedBox(height: 16)
                         : SizedBox(height: MediaQuery.of(context).padding.top),
                     Row(
@@ -79,15 +79,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              activeLocation.when(
-                                data: (location) => _buildLocationLabel(
-                                  label: location.label,
-                                  colors: colors,
-                                ),
-                                loading: () =>
-                                    HomeLocationShimmer(colors: colors),
-                                error: (_, _) =>
-                                    HomeLocationShimmer(colors: colors),
+                              _buildLocationLabel(
+                                label: activeLocation.label,
+                                colors: colors,
                               ),
                               Text(
                                 DateFormat(
@@ -258,7 +252,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       color: colors.textColor,
                                       sizeStyle: CupertinoButtonSize.medium,
                                       onPressed: () {
-                                        ref.invalidate(activeLocationProvider);
+                                        ref.invalidate(currentWeatherProvider);
+                                        ref.invalidate(hourlyWeatherProvider);
+                                        ref.invalidate(weeklyWeatherProvider);
                                       },
                                       child: Text(
                                         'Retry',
@@ -377,7 +373,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget  _buildTemperatureText({
+  Widget _buildTemperatureText({
     required Weather weatherData,
     required AppColors colors,
     required bool isDark,

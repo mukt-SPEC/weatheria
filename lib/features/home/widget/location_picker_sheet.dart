@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:weatheria/core/theme/app_color.dart';
 import 'package:weatheria/core/theme/text_style.dart';
 import 'package:weatheria/core/theme/theme_provider.dart';
-import 'package:weatheria/features/home/provider/geolocation_provider.dart';
 import 'package:weatheria/features/home/provider/saved_locations_provider.dart';
 
 class LocationPickerSheet extends ConsumerWidget {
@@ -21,14 +20,13 @@ class LocationPickerSheet extends ConsumerWidget {
 
     final selectedId = ref.watch(selectedLocationProvider);
     final savedLocations = ref.watch(savedLocationsProvider);
-    final currentLocationAsync = ref.watch(geolocationProvider);
+    final activeSource = ref.watch(activeLocationSourceProvider);
+    final currentLocationSession = ref.watch(currentLocationSessionProvider);
 
-    final currentLocationLabel = currentLocationAsync.when(
-      data: (geoLocation) => geoLocation.displayName.isEmpty
-          ? 'Current location'
-          : geoLocation.displayName,
-      loading: () => 'Current location',
-      error: (_, _) => 'Current location',
+    final currentLocationLabel = currentLocationSession.when(
+      data: (location) => location?.label ?? 'Use current location',
+      loading: () => 'Finding current location...',
+      error: (_, _) => 'Use current location',
     );
 
     return CupertinoActionSheet(
@@ -37,26 +35,41 @@ class LocationPickerSheet extends ConsumerWidget {
           color: colors.backgroundColor,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _LocationRow(
-              title: currentLocationLabel,
-              isSelected: selectedId == currentLocationId,
-              canDelete: false,
-              colors: colors,
-              onTap: () async {
-                await ref
-                    .read(selectedLocationProvider.notifier)
-                    .select(currentLocationId);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-              },
-              onDelete: null,
-            ),
-            if (savedLocations.isNotEmpty)
-              const Divider(height: 1, thickness: 0.3),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _LocationRow(
+                title: currentLocationLabel,
+                isSelected:
+                    activeSource == ActiveLocationSource.currentLocation,
+                canDelete: false,
+                colors: colors,
+                onTap: () async {
+                  final success = await ref
+                      .read(locationSelectionControllerProvider)
+                      .useCurrentLocation();
+                  if (success && context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                onDelete: null,
+                trailing: currentLocationSession.isLoading
+                    ? CupertinoActivityIndicator(color: colors.textColor)
+                    : null,
+              ),
+              if (currentLocationSession.hasError)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    _formatCurrentLocationError(currentLocationSession.error),
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: CupertinoColors.destructiveRed,
+                    ),
+                  ),
+                ),
+              if (savedLocations.isNotEmpty)
+                const Divider(height: 1, thickness: 0.3),
             ...savedLocations.asMap().entries.map((entry) {
               final index = entry.key;
               final location = entry.value;
@@ -66,13 +79,15 @@ class LocationPickerSheet extends ConsumerWidget {
                 children: [
                   _LocationRow(
                     title: location.label,
-                    isSelected: selectedId == location.id,
+                    isSelected:
+                        activeSource == ActiveLocationSource.startup &&
+                        selectedId == location.id,
                     canDelete: true,
                     colors: colors,
                     onTap: () async {
                       await ref
-                          .read(selectedLocationProvider.notifier)
-                          .select(location.id);
+                          .read(locationSelectionControllerProvider)
+                          .selectStartupLocation(location.id);
                       if (context.mounted) {
                         Navigator.pop(context);
                       }
@@ -127,6 +142,7 @@ class _LocationRow extends StatelessWidget {
     required this.colors,
     required this.onTap,
     required this.onDelete,
+    this.trailing,
   });
 
   final String title;
@@ -135,6 +151,7 @@ class _LocationRow extends StatelessWidget {
   final AppColors colors;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +180,11 @@ class _LocationRow extends StatelessWidget {
                 color: colors.textColor,
               ),
             ),
+          if (trailing != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: trailing!,
+            ),
           if (canDelete)
             CupertinoButton(
               padding: const EdgeInsets.only(left: 10),
@@ -178,4 +200,15 @@ class _LocationRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatCurrentLocationError(Object? error) {
+  final message = error?.toString() ?? 'Unable to use current location.';
+  if (message.toLowerCase().contains('permission')) {
+    return 'Location permission was denied. We kept your current city selected.';
+  }
+  if (message.toLowerCase().contains('disabled')) {
+    return 'Location services are disabled. We kept your current city selected.';
+  }
+  return 'Unable to load your current location right now.';
 }
