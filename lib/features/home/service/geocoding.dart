@@ -20,7 +20,7 @@ class GeocodingService {
           "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$latitude&lon=$longitude",
         ),
         headers: _headers,
-      );
+      ).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
       GeoLocation geoLocation = GeoLocation.fromJson(
         json.decode(response.body),
@@ -41,7 +41,7 @@ class GeocodingService {
           "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1",
         ),
         headers: _headers,
-      );
+      ).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
 
       final decoded = json.decode(response.body) as List<dynamic>;

@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Weatheria uses your location to show weather for your current city when you choose "Use current location".</string>
 </dict>
 </plist>

@@ -11,7 +11,7 @@ import '../../../features/weather/model/weekly_weather.dart';
 import '../../service/api_helper.dart';
 
 final currentWeatherProvider = FutureProvider.autoDispose<Weather>((ref) async {
-  final activeLocation = await ref.watch(activeLocationProvider.future);
+  final activeLocation = ref.watch(activeLocationProvider);
   final weather = await ApiHelper.getCurrentWeather(
     lat: activeLocation.lat,
     lon: activeLocation.lon,
@@ -23,7 +23,7 @@ final currentWeatherProvider = FutureProvider.autoDispose<Weather>((ref) async {
 final hourlyWeatherProvider = FutureProvider.autoDispose<HourlyWeather>((
   ref,
 ) async {
-  final activeLocation = await ref.watch(activeLocationProvider.future);
+  final activeLocation = ref.watch(activeLocationProvider);
   final weather = await ApiHelper.getHourlyWeather(
     lat: activeLocation.lat,
     lon: activeLocation.lon,
@@ -35,7 +35,7 @@ final hourlyWeatherProvider = FutureProvider.autoDispose<HourlyWeather>((
 final weeklyWeatherProvider = FutureProvider.autoDispose<WeeklyWeather>((
   ref,
 ) async {
-  final activeLocation = await ref.watch(activeLocationProvider.future);
+  final activeLocation = ref.watch(activeLocationProvider);
   final weather = await ApiHelper.getWeeklyWeather(
     lat: activeLocation.lat,
     lon: activeLocation.lon,
