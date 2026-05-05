@@ -29,7 +29,9 @@ Weatheria is a premium, high-performance weather application built with Flutter.
 
 ### 🖥️ Desktop & Web
 <div align="center">
-  <img src="https://raw.githubusercontent.com/placeholder-screenshots/weatheria-desktop.png" width="800" alt="Desktop Dashboard">
+ <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/aaa81dbb-df9e-40fa-a417-74eb75979b08" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/b9c003a0-f4ee-4c4f-92fb-8db0acfcb4f2" />
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/4ebec841-bbc9-4bd0-886a-3bf97ca1e784" />
 </div>
 
 ### 🎬 Video Walkthrough
