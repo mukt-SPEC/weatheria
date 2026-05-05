@@ -165,9 +165,9 @@ class _HomeShimmer extends StatelessWidget {
         begin: Alignment.centerLeft,
         end: Alignment.centerRight,
         colors: [
-          colors.secondaryTextColor.withOpacity(0.16),
-          colors.textColor.withOpacity(0.08),
-          colors.secondaryTextColor.withOpacity(0.16),
+          colors.secondaryTextColor.withValues(alpha: 0.16),
+          colors.textColor.withValues(alpha: 0.08),
+          colors.secondaryTextColor.withValues(alpha: 0.16),
         ],
       ),
       child: child,

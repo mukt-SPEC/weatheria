@@ -14,7 +14,7 @@ final isOfflineProvider = Provider.autoDispose<bool>((ref) {
 
   return connectivity.when(
     data: (results) => results.contains(ConnectivityResult.none),
-    loading: () => true,
-    error: (_, _) => true,
+    loading: () => false,
+    error: (_, _) => false,
   );
 });

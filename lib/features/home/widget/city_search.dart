@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -10,6 +9,7 @@ import 'package:weatheria/core/utils/weather_icons.dart';
 import 'package:weatheria/features/home/model/saved_location.dart';
 import 'package:weatheria/features/home/provider/saved_locations_provider.dart';
 
+/// Adaptive city search widget — works as both bottom sheet and dialog content.
 class CitySearch extends ConsumerStatefulWidget {
   const CitySearch({super.key});
 
@@ -19,7 +19,26 @@ class CitySearch extends ConsumerStatefulWidget {
 
 class _CitySearchState extends ConsumerState<CitySearch> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   String? _searchQuery;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-focus the search field for keyboard-first interaction
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   void _searchLocation() {
     if (_controller.text.trim().isEmpty) return;
@@ -37,91 +56,130 @@ class _CitySearchState extends ConsumerState<CitySearch> {
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
     final colors = isDark ? AppColors.dark : AppColors.light;
 
-    final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
     final weatherAsync = _searchQuery != null
         ? ref.watch(searchWeatherProvider(_searchQuery!))
         : null;
 
-    return CupertinoActionSheet(
-      message: Padding(
-        padding: EdgeInsets.only(
-          bottom: bottomInset > 0 ? bottomInset - 40 : 0,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CupertinoSearchTextField(
-              controller: _controller,
-              placeholder: 'Search for a city',
-              onSuffixTap: _searchQuery != null
-                  ? () {
-                      _controller.clear();
-                      setState(() => _searchQuery = null);
-                    }
-                  : null,
-              onSubmitted: (_) => _searchLocation(),
-            ),
-            const SizedBox(height: 16),
-
-            AnimatedSize(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              child: _searchQuery == null
-                  ? const SizedBox(width: double.infinity)
-                  : Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: colors.backgroundColor,
-                        borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Search field
+          TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            decoration: InputDecoration(
+              hintText: 'Search for a city',
+              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                color: colors.secondaryTextColor,
+              ),
+              prefixIcon: Icon(
+                PhosphorIconsRegular.magnifyingGlass,
+                color: colors.secondaryTextColor,
+                size: 20,
+              ),
+              suffixIcon: _searchQuery != null
+                  ? IconButton(
+                      icon: Icon(
+                        PhosphorIconsRegular.x,
+                        color: colors.secondaryTextColor,
+                        size: 20,
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child:
-                            weatherAsync?.when(
-                              data: (weather) {
-                                return Column(
-                                  children: [
-                                    IconTheme(
-                                      data: IconThemeData(
-                                        size: 48,
-                                        color: colors.textColor,
-                                      ),
-                                      child: getWeatherIcon(
-                                        weather.current.isDay,
-                                        weathercode:
-                                            weather.current.condition.code,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "${weather.location.name}: ${weather.current.condition.text}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                    Text(
-                                      "${weather.current.tempC.round()}°C",
-                                      style: AppTextStyles.titleLarge.copyWith(
-                                        fontSize: 64,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    CupertinoButton(
-                                      minimumSize: Size(double.infinity, 40),
-                                      color: colors.textColor,
-                                      sizeStyle: CupertinoButtonSize.medium,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                      ),
+                      onPressed: () {
+                        _controller.clear();
+                        setState(() => _searchQuery = null);
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: colors.cardColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: colors.textColor, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            style: AppTextStyles.bodyMedium.copyWith(color: colors.textColor),
+            onSubmitted: (_) => _searchLocation(),
+            textInputAction: TextInputAction.search,
+          ),
+          const SizedBox(height: 16),
 
+          // Search results
+          AnimatedSize(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+            child: _searchQuery == null
+                ? const SizedBox(width: double.infinity)
+                : Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: colors.backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.borderColor),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child:
+                          weatherAsync?.when(
+                            data: (weather) {
+                              return Column(
+                                children: [
+                                  IconTheme(
+                                    data: IconThemeData(
+                                      size: 48,
+                                      color: colors.textColor,
+                                    ),
+                                    child: getWeatherIcon(
+                                      weather.current.isDay,
+                                      weathercode:
+                                          weather.current.condition.code,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "${weather.location.name}: ${weather.current.condition.text}",
+                                    style: AppTextStyles.titleMedium.copyWith(
+                                      color: colors.textColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    "${weather.current.tempC.round()}°C",
+                                    style: AppTextStyles.displayLarge.copyWith(
+                                      fontSize: 64,
+                                      color: colors.textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: colors.textColor,
+                                        foregroundColor: colors.backgroundColor,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                      ),
                                       onPressed: () async {
                                         final savedLocationId =
                                             SavedLocation.coordinateId(
-                                              weather.location.lat,
-                                              weather.location.lon,
-                                            );
+                                          weather.location.lat,
+                                          weather.location.lon,
+                                        );
 
                                         await ref
                                             .read(
@@ -142,53 +200,65 @@ class _CitySearchState extends ConsumerState<CitySearch> {
                                           Navigator.pop(context);
                                         }
                                       },
-                                      child: Text(
+                                      icon: const Icon(Icons.add, size: 18),
+                                      label: Text(
                                         'Add Location',
                                         style: AppTextStyles.bodyMedium
                                             .copyWith(
-                                              fontSize: 14,
-                                              color: colors.backgroundColor,
-                                            ),
+                                          fontSize: 14,
+                                          color: colors.backgroundColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                            loading: () => const Padding(
+                              padding: EdgeInsets.only(top: 40.0),
+                              child: Center(
+                                child: CircularProgressIndicator.adaptive(),
+                              ),
+                            ),
+                            error: (err, stack) => Padding(
+                              padding: const EdgeInsets.only(top: 40.0),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    PhosphorIcon(
+                                      PhosphorIconsFill.buildings,
+                                      size: 48,
+                                      color: colors.secondaryTextColor,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "City not found",
+                                      style:
+                                          AppTextStyles.titleMedium.copyWith(
+                                        color: colors.textColor,
                                       ),
                                     ),
                                   ],
-                                );
-                              },
-                              loading: () => const Padding(
-                                padding: EdgeInsets.only(top: 40.0),
-                                child: Center(
-                                  child: CupertinoActivityIndicator(),
                                 ),
                               ),
-                              error: (err, stack) => Padding(
-                                padding: const EdgeInsets.only(top: 40.0),
-                                child: Center(
-                                  child: Column(
-                                    children: [
-                                      PhosphorIcon(
-                                        PhosphorIconsFill.buildings,
-                                        size: 48,
-                                      ),
-                                      Text(
-                                        "City not found",
-                                        style: AppTextStyles.headlineSmall
-                                            .copyWith(fontSize: 18),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ) ??
-                            const SizedBox.shrink(),
-                      ),
+                            ),
+                          ) ??
+                          const SizedBox.shrink(),
                     ),
-            ),
+                  ),
+          ),
 
-            if (_searchQuery == null)
-              CupertinoButton(
-                minimumSize: Size(double.infinity, 40),
-                color: colors.textColor,
-                sizeStyle: CupertinoButtonSize.medium,
+          // Search button (only when no results are showing)
+          if (_searchQuery == null) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.textColor,
+                  foregroundColor: colors.backgroundColor,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
                 onPressed: _searchLocation,
                 child: Text(
                   'Search',
@@ -198,19 +268,23 @@ class _CitySearchState extends ConsumerState<CitySearch> {
                   ),
                 ),
               ),
+            ),
           ],
-        ),
-      ),
-      cancelButton: CupertinoActionSheetAction(
-        isDefaultAction: true,
-        onPressed: () => Navigator.pop(context),
-        child: Text(
-          'Cancel',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: CupertinoColors.systemGrey,
-            fontSize: 16,
+
+          const SizedBox(height: 8),
+
+          // Cancel button
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: colors.secondaryTextColor,
+                fontSize: 16,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
